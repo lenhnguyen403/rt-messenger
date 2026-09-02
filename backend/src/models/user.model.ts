@@ -32,11 +32,10 @@ const userSchema = new Schema<UserDocument>(
     }
 )
 
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
     if (this.password && this.isModified("password")) {
         this.password = await hashValue(this.password);
     }
-    next();
 });
 
 userSchema.methods.comparePassword = async function (value: string): Promise<boolean> {
