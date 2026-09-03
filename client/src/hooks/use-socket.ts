@@ -2,9 +2,10 @@ import { io, Socket } from 'socket.io-client'
 import { create } from 'zustand'
 
 const BASE_URL =
-    import.meta.env.MODE === "development"
-        ? import.meta.env.VITE_API_URL
-        : "/"
+    // import.meta.env.MODE === "development"
+    //     ? import.meta.env.VITE_API_URL
+    //     : "/"
+    import.meta.env.VITE_API_URL || window.location.origin
 
 interface SocketState {
     socket: Socket | null
