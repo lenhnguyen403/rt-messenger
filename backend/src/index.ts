@@ -37,6 +37,10 @@ app.use(
 
 app.use(passport.initialize());
 
+app.get("/", asyncHandler(async (req: Request, res: Response) => {
+  res.send("API for Realtime Messenger")
+}))
+
 app.get(
   "/health",
   asyncHandler(async (req: Request, res: Response) => {
