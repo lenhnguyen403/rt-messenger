@@ -15,7 +15,7 @@ interface AuthState {
     register: (data: RegisterType) => void;
     login: (data: LoginType) => void;
     logout: () => void;
-    isAuthStatus: () => void;
+    isAuthStatus: () => Promise<void>;
 }
 
 //Without Persist

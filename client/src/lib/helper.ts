@@ -9,6 +9,19 @@ export const isUserOnline = (userId?: string) => {
     return onlineUsers.includes(userId)
 }
 
+
+export const isSameId = (left: unknown, right: unknown) => {
+    const getId = (value: unknown) => {
+        if (value && typeof value === "object" && "_id" in value) {
+            return (value as { _id: unknown })._id
+        }
+        return value
+    }
+
+    const leftId = getId(left)
+    const rightId = getId(right)
+    return leftId != null && rightId != null && String(leftId) === String(rightId)
+}
 export const getOtherUserAndGroup = (
     chat: ChatType,
     currentUserId: string | null
@@ -24,15 +37,20 @@ export const getOtherUserAndGroup = (
         }
     }
 
-    const other = chat?.participants.find((p) => p._id !== currentUserId)
+    const other = chat?.participants.find((p) => !isSameId(p, currentUserId));
     const isOnline = isUserOnline(other?._id ?? "")
+
+    const subheading = other?.isAI
+        ? "Assistant"
+        : isOnline ? "Online" : "Offline"
 
     return {
         name: other?.name || "Unknown",
-        subheading: isOnline ? "Online" : "Offline",
+        subheading,
         avatar: other?.avatar || "",
+        isGroup: false,
         isOnline,
-        isAI: other?.isAI || false,
+        isAI: other?.isAI || false
     }
 }
 

@@ -18,6 +18,10 @@ import "./config/password.config";
 const app = express();
 const server = http.createServer(app);
 
+const FRONTEND_ORIGIN = Env.FRONTEND_ORIGIN
+const PORT = Env.PORT
+const NODE_ENV = Env.NODE_ENV
+
 //socket
 initializeSocket(server);
 
@@ -26,7 +30,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: Env.FRONTEND_ORIGIN,
+    origin: FRONTEND_ORIGIN,
     credentials: true,
   })
 );
@@ -45,7 +49,7 @@ app.get(
 
 app.use("/api", routes);
 
-if (Env.NODE_ENV === "production") {
+if (NODE_ENV === "production") {
   const clientPath = path.resolve(__dirname, "../../client/dist");
 
   //Serve static files
@@ -58,7 +62,7 @@ if (Env.NODE_ENV === "production") {
 
 app.use(errorHandler);
 
-server.listen(Env.PORT, async () => {
+server.listen(PORT, async () => {
   await connectDatabase();
-  console.log(`Server running on port ${Env.PORT} in ${Env.NODE_ENV} mode`);
+  console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
 });

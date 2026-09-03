@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useChat } from "@/hooks/use-chat";
 import { Spinner } from "../ui/spinner";
 import ChatListItem from "./chat-list-item";
@@ -11,6 +12,7 @@ import type { MessageType } from "../../types/chat.type";
 
 const ChatList = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { socket } = useSocket();
   const {
     fetchChats,
@@ -18,6 +20,8 @@ const ChatList = () => {
     isChatsLoading,
     addNewChat,
     updateChatLastMessage,
+    unreadCounts,
+    markChatAsRead,
   } = useChat();
   const { user } = useAuth();
   const currentUserId = user?._id || null;
@@ -63,6 +67,14 @@ const ChatList = () => {
     }) => {
       console.log("Recieved update on chat", data.lastMessage);
       updateChatLastMessage(data.chatId, data.lastMessage);
+      if (!pathname.includes(data.chatId)) {
+        useChat.setState((state) => ({
+          unreadCounts: {
+            ...state.unreadCounts,
+            [data.chatId]: (state.unreadCounts[data.chatId] || 0) + 1,
+          },
+        }));
+      }
     };
 
     socket.on("chat:update", handleChatUpdate);
@@ -70,7 +82,14 @@ const ChatList = () => {
     return () => {
       socket.off("chat:update", handleChatUpdate);
     };
-  }, [socket, updateChatLastMessage]);
+  }, [pathname, socket, updateChatLastMessage]);
+
+  useEffect(() => {
+    const activeChatId = pathname.startsWith("/chat/")
+      ? pathname.split("/")[2]
+      : null;
+    if (activeChatId) markChatAsRead(activeChatId);
+  }, [markChatAsRead, pathname]);
 
   const onRoute = (id: string) => {
     navigate(`/chat/${id}`);
@@ -112,6 +131,7 @@ const ChatList = () => {
                   key={chat._id}
                   chat={chat}
                   currentUserId={currentUserId}
+                  unreadCount={unreadCounts[chat._id] || 0}
                   onClick={() => onRoute(chat._id)}
                 />
               ))

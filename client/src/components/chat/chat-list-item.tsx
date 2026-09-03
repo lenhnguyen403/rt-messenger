@@ -9,8 +9,14 @@ interface PropsType {
   chat: ChatType;
   currentUserId: string | null;
   onClick?: () => void;
+  unreadCount: number;
 }
-const ChatListItem = ({ chat, currentUserId, onClick }: PropsType) => {
+const ChatListItem = ({
+  chat,
+  currentUserId,
+  onClick,
+  unreadCount,
+}: PropsType) => {
   const { pathname } = useLocation();
   const { lastMessage, createdAt } = chat;
 
@@ -47,6 +53,7 @@ const ChatListItem = ({ chat, currentUserId, onClick }: PropsType) => {
         `w-full flex items-center gap-2 p-2 rounded-sm
          hover:bg-sidebar-accent transition-colors text-left`,
         pathname.includes(chat._id) && "bg-sidebar-accent!",
+        unreadCount > 0 && "bg-primary/10 font-semibold",
       )}>
       <AvatarWithBadge
         name={name}
@@ -56,19 +63,30 @@ const ChatListItem = ({ chat, currentUserId, onClick }: PropsType) => {
       />
 
       <div className="flex-1 min-w-0">
-        <div
-          className="
-         flex items-center justify-between mb-0.5
-        ">
-          <h5 className="text-sm font-semibold truncate">{name}</h5>
-          <span
-            className="text-xs
-           ml-2 shrink-0 text-muted-foreground
-          ">
-            {formatChatTime(lastMessage?.updatedAt || createdAt)}
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-0.5">
+          <h5
+            className={cn(
+              "min-w-0 truncate text-sm",
+              unreadCount > 0 && "font-bold",
+            )}>
+            {name}
+          </h5>
+          <div className="flex shrink-0 items-center gap-2">
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {formatChatTime(lastMessage?.updatedAt || createdAt)}
+            </span>
+          </div>
         </div>
-        <p className="text-xs truncate text-muted-foreground -mt-px">
+        <p
+          className={cn(
+            "truncate text-xs text-muted-foreground -mt-px",
+            unreadCount > 0 && "font-bold text-foreground",
+          )}>
           {getLastMessageText()}
         </p>
       </div>

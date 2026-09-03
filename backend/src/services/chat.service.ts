@@ -19,7 +19,19 @@ export const createChatService = async (
     let allParticipantIds: string[] = []
 
     if (isGroup && participants?.length && groupName) {
-        allParticipantIds = [userId, ...participants]
+        const uniqueParticipants = [...new Set(participants)]
+        if (uniqueParticipants.includes(userId)) {
+            throw new BadRequestException('The chat creator is added automatically')
+        }
+
+        const participantCount = await UserModel.countDocuments({
+            _id: { $in: uniqueParticipants },
+        })
+        if (participantCount !== uniqueParticipants.length) {
+            throw new NotFoundException('One or more participants were not found')
+        }
+
+        allParticipantIds = [userId, ...uniqueParticipants]
         chat = await ChatModel.create({
             participants: allParticipantIds,
             isGroup: true,
@@ -36,7 +48,12 @@ export const createChatService = async (
                 $all: allParticipantIds,
                 $size: 2,
             }
-        }).populate('participants', 'name avatar')
+        })
+            .populate('participants', 'name avatar isAI')
+            .populate({
+                path: 'lastMessage',
+                populate: { path: 'sender', select: 'name avatar isAI' },
+            })
 
         if (existingChat) return existingChat
 
@@ -47,15 +64,19 @@ export const createChatService = async (
         })
     }
 
+    if (!chat) {
+        throw new BadRequestException('Provide a participant or valid group details')
+    }
+
     // Implement socket
-    const populatedChat = await chat?.populate("participants", "name avatar isAI")
-    const participantIdStrings = populatedChat?.participants?.map((p) => {
+    const populatedChat = await chat.populate("participants", "name avatar isAI")
+    const participantIdStrings = populatedChat.participants.map((p) => {
         return p._id?.toString()
     })
 
     emitNewChatToParticipants(participantIdStrings, populatedChat)
 
-    return chat
+    return populatedChat
 }
 
 export const getUserChatsService = async (userId: string) => {
@@ -69,7 +90,7 @@ export const getUserChatsService = async (userId: string) => {
             path: 'lastMessage',
             populate: {
                 path: 'sender',
-                select: 'name avatar'
+                select: 'name avatar isAI'
             }
         })
         .sort({ updatedAt: -1 })
@@ -77,30 +98,37 @@ export const getUserChatsService = async (userId: string) => {
     return chats
 }
 
-export const getSingleChatService = async (chatId: string, userId: string) => {
-    const chat = await ChatModel.find({
+export const getSingleChatService = async (chatId: string, userId: string, page = 1, requestedLimit = 30) => {
+    const chat = await ChatModel.findOne({
         _id: chatId,
         participants: {
             $in: [userId],
         },
-    }).populate('participants', 'name avatar')
+    }).populate('participants', 'name avatar isAI')
 
-    if (!chat)
+    if (!chat) {
         throw new BadRequestException('Chat not found or you are not authorized to view this chat')
+    }
 
+    page = Math.max(1, page)
+    const limit = Math.min(50, Math.max(1, requestedLimit))
+    const total = await MessageModel.countDocuments({ chatId })
     const messages = await MessageModel.find({ chatId })
-        .populate('sender', 'name avatar')
+        .populate('sender', 'name avatar isAI')
         .populate({
             path: 'replyTo',
             select: 'content image sender',
             populate: {
                 path: 'sender',
-                select: 'name avatar',
+                select: 'name avatar isAI',
             },
         })
-        .sort({ createdAt: 1 })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+    messages.reverse()
 
-    return { chat, messages }
+    return { chat, messages, page, hasMore: page * limit < total }
 }
 
 export const validateChatParticipant = async (chatId: string, userId: string) => {

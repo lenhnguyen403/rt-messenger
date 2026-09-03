@@ -7,10 +7,12 @@ import {
     getUserChatsService,
     getSingleChatService
 } from '../services/chat.service'
+import { UnauthorizedException } from '../utils/app-error';
 
 export const createChatController = asyncHandler(
     async (req: Request, res: Response) => {
-        const userId = req.user?._id
+        const userId = req.user?._id?.toString()
+        if (!userId) throw new UnauthorizedException()
         const body = createChatSchema.parse(req.body)
         const chat = await createChatService(userId, body)
 
@@ -23,7 +25,8 @@ export const createChatController = asyncHandler(
 
 export const getUserChatsController = asyncHandler(
     async (req: Request, res: Response) => {
-        const userId = req.user?._id
+        const userId = req.user?._id?.toString()
+        if (!userId) throw new UnauthorizedException()
         const chats = await getUserChatsService(userId)
 
         return res.status(HTTPSTATUS.OK).json({
@@ -35,14 +38,19 @@ export const getUserChatsController = asyncHandler(
 
 export const getSingleChatController = asyncHandler(
     async (req: Request, res: Response) => {
-        const userId = req.user?._id
+        const userId = req.user?._id?.toString()
+        if (!userId) throw new UnauthorizedException()
         const { id } = chatIdSchema.parse(req.params)
-        const { chat, messages } = await getSingleChatService(id, userId)
+        const page = Number(req.query.page) || 1
+        const limit = Number(req.query.limit) || 30
+        const { chat, messages, hasMore } = await getSingleChatService(id, userId, page, limit)
 
         return res.status(HTTPSTATUS.OK).json({
             message: "User chats retrieved successfully",
             chat,
             messages,
+            page,
+            hasMore,
         })
     }
 )

@@ -27,13 +27,21 @@ export const initializeSocket = (httpServer: HTTPServer) => {
 
             if (!rawCookie) return next(new Error('Unauthorized'))
 
-            const token = rawCookie?.split("=")?.[1]?.trim()
+            const token = rawCookie
+                .split(';')
+                .map((cookie) => cookie.trim())
+                .find((cookie) => cookie.startsWith('accessToken='))
+                ?.slice('accessToken='.length)
+                .trim()
             if (!token) return next(new Error('Unauthorized'))
 
-            const decodedToken = jwt.verify(token, Env.JWT_SECRET) as {
-                userId: string
+            const decodedToken = jwt.verify(token, Env.JWT_SECRET, {
+                audience: 'user',
+                algorithms: ['HS256'],
+            })
+            if (typeof decodedToken === 'string' || !decodedToken.userId) {
+                return next(new Error('Unauthorized'))
             }
-            if (!decodedToken) return next(new Error('Unauthorized'))
 
             socket.userId = decodedToken.userId
             next()
@@ -80,6 +88,20 @@ export const initializeSocket = (httpServer: HTTPServer) => {
                 console.log(`User ${userId} left room chat:${chatId}`);
 
             }
+        })
+
+        socket.on("typing:start", async (chatId: string) => {
+            try {
+                await validateChatParticipant(chatId, userId)
+                socket.to(`chat:${chatId}`).emit("typing:update", { chatId, userId, isTyping: true })
+            } catch { /* Ignore invalid rooms. */ }
+        })
+
+        socket.on("typing:stop", async (chatId: string) => {
+            try {
+                await validateChatParticipant(chatId, userId)
+                socket.to(`chat:${chatId}`).emit("typing:update", { chatId, userId, isTyping: false })
+            } catch { /* Ignore invalid rooms. */ }
         })
 
         socket.on("disconnect", () => {
@@ -141,4 +163,52 @@ export const emitLastMessageToParticipants = (
     for (const participantId of participantIds) {
         io.to(`user:${participantId}`).emit("chat:update", payload)
     }
+}
+
+export const emitChatAI = ({
+    chatId, chunk = null, sender, done = false, message = null,
+}: {
+    chatId: string,
+    chunk?: string | null
+    sender?: any
+    done?: boolean
+    message?: any
+}) => {
+    const io = getIO()
+    if (chunk?.trim() && !done) {
+        io.to(`chat:${chatId}`).emit("chat:ai", {
+            chatId,
+            chunk,
+            done,
+            message: null,
+            sender
+        })
+
+        return
+    }
+
+    if (done) {
+        io.to(`chat:${chatId}`).emit("chat:ai", {
+            chatId,
+            chunk: null,
+            done,
+            message,
+            sender
+        })
+
+        return
+    }
+}
+
+export const emitUpdatedMessageToChatRoom = (chatId: string, message: any) => {
+    const io = getIO()
+    io.to(`chat:${chatId}`).emit("message:updated", message)
+}
+
+export const emitMentionNotification = (
+    userId: string,
+    payload: { chatId: string; messageId: string; senderName: string; content: string },
+) => {
+    const io = getIO()
+    io.to(`user:${userId}`).emit("mention:notification", payload)
 }

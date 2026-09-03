@@ -1,6 +1,6 @@
 export type RegisterType = {
     name: string
-    email: string
+    email?: string
     password: string
     avatar?: string
 }
@@ -16,6 +16,6 @@ export interface UserType {
     email: string
     avatar?: string | null
     isAI?: boolean
-    createdAt: Date
-    updatedAt: Date
+    createdAt: string
+    updatedAt: string
 }
