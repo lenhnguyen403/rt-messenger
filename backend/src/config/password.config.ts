@@ -9,8 +9,8 @@ passport.use(
         {
             jwtFromRequest: ExtractJwt.fromExtractors([
                 (req) => {
-                    const token = req.cookie.access_token;
-                    if (!token) throw new UnauthorizedException("Access token not found in cookies");
+                    const token = req.cookies.accessToken;
+                    if (!token) throw new UnauthorizedException("Unauthorized access");
                     return token;
                 }
             ]),
@@ -20,7 +20,7 @@ passport.use(
         },
         async ({ userId }, done) => {
             try {
-                const user = await findByIdUserService(userId);
+                const user = userId && (await findByIdUserService(userId));
                 return done(null, user || false);
             } catch (error) {
                 return done(null, false)

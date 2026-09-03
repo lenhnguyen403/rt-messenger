@@ -79,12 +79,14 @@ export const getUserChatsService = async (userId: string) => {
 
 export const getSingleChatService = async (chatId: string, userId: string) => {
     const chat = await ChatModel.find({
+        _id: chatId,
         participants: {
-            $in: [userId]
+            $in: [userId],
         },
     }).populate('participants', 'name avatar')
 
-    if (!chat) throw new BadRequestException('Chat not found or you are not authorized to view this chat')
+    if (!chat)
+        throw new BadRequestException('Chat not found or you are not authorized to view this chat')
 
     const messages = await MessageModel.find({ chatId })
         .populate('sender', 'name avatar')

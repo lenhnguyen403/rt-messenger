@@ -15,7 +15,13 @@ export interface UserDocument extends Document {
 const userSchema = new Schema<UserDocument>(
     {
         name: { type: String, required: true },
-        email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+        email: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            lowercase: true
+        },
         password: { type: String, required: true },
         avatar: { type: String, default: null },
     },
@@ -38,8 +44,8 @@ userSchema.pre("save", async function () {
     }
 });
 
-userSchema.methods.comparePassword = async function (value: string): Promise<boolean> {
-    return compareValue(value, this.password);
+userSchema.methods.comparePassword = async function (val: string) {
+    return compareValue(val, this.password);
 }
 
 const UserModel = mongoose.model<UserDocument>("User", userSchema);
