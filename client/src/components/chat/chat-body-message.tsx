@@ -79,6 +79,12 @@ const ChatMessageBody = memo(
     const isSeen =
       isCurrentUser &&
       message.readBy?.some((entry) => !isSameId(entry.userId, userId));
+    const reactionCounts = (message.reactions || []).reduce<
+      Record<string, number>
+    >((counts, reaction) => {
+      counts[reaction.emoji] = (counts[reaction.emoji] || 0) + 1;
+      return counts;
+    }, {});
     return (
       <div id={`message-${message._id}`} className={containerClass}>
         {!isCurrentUser && (
@@ -93,67 +99,149 @@ const ChatMessageBody = memo(
         <div className={contentWrapperClass}>
           <div
             className={cn(
-              "flex items-center gap-1",
+              "flex items-start gap-1",
               isCurrentUser && "flex-row-reverse",
             )}>
-            <div className={messageClass}>
-              {/* {Header} */}
+            <div className="flex min-w-0 flex-col">
+              <div className={messageClass}>
+                {/* {Header} */}
 
-              <div className="flex items-center gap-2 mb-0.5 pb-1">
-                <span className="text-xs font-semibold">{senderName}</span>
-                <span className="text-[11px] text-gray-700 dark:text-gray-300">
-                  {formatChatTime(message?.createdAt)}
-                </span>
-                {message.isEdited && (
-                  <span className="text-[11px] text-gray-500">(edited)</span>
+                <div className="flex items-center gap-2 mb-0.5 pb-1">
+                  <span className="text-xs font-semibold">{senderName}</span>
+                  <span className="text-[11px] text-gray-700 dark:text-gray-300">
+                    {formatChatTime(message?.createdAt)}
+                  </span>
+                  {message.isEdited && (
+                    <span className="text-[11px] text-gray-500">(edited)</span>
+                  )}
+                </div>
+
+                {/* ReplyToBox */}
+                {message.replyTo && (
+                  <div className={replyBoxClass}>
+                    <h5 className="font-medium">{replySendername}</h5>
+                    <p
+                      className="font-normal text-muted-foreground
+                 max-w-62.5 truncate
+                ">
+                      {message.replyTo.isDeleted
+                        ? "Tin nhắn đã bị xóa"
+                        : message.replyTo.content ||
+                          (message.replyTo.image
+                            ? "📷 Photo"
+                            : "Message unavailable")}
+                    </p>
+                  </div>
+                )}
+
+                {message?.image && (
+                  <img
+                    src={message?.image || ""}
+                    alt=""
+                    className="rounded-lg max-w-xs"
+                    onLoad={onImageLoad}
+                  />
+                )}
+
+                {message.isDeleted ? (
+                  <span className="italic text-muted-foreground">
+                    Tin nhắn đã bị xóa
+                  </span>
+                ) : message.content ? (
+                  searchQuery ? (
+                    <div className="whitespace-pre-wrap">
+                      {highlightContent(message.content)}
+                    </div>
+                  ) : (
+                    <Response>{message.content}</Response>
+                  )
+                ) : null}
+
+                {message?.streaming && (
+                  <span>
+                    <RiCircleFill className="h-4 w-4 animate-bounce rounded-full dark:text-white mt-1" />
+                  </span>
                 )}
               </div>
 
-              {/* ReplyToBox */}
-              {message.replyTo && (
-                <div className={replyBoxClass}>
-                  <h5 className="font-medium">{replySendername}</h5>
-                  <p
-                    className="font-normal text-muted-foreground
-                 max-w-62.5 truncate
-                ">
-                    {message.replyTo.isDeleted
-                      ? "Tin nhắn đã bị xóa"
-                      : message.replyTo.content ||
-                        (message.replyTo.image
-                          ? "📷 Photo"
-                          : "Message unavailable")}
-                  </p>
-                </div>
-              )}
-
-              {message?.image && (
-                <img
-                  src={message?.image || ""}
-                  alt=""
-                  className="rounded-lg max-w-xs"
-                  onLoad={onImageLoad}
-                />
-              )}
-
-              {message.isDeleted ? (
-                <span className="italic text-muted-foreground">
-                  Tin nhắn đã bị xóa
-                </span>
-              ) : message.content ? (
-                searchQuery ? (
-                  <div className="whitespace-pre-wrap">
-                    {highlightContent(message.content)}
+              {!message.isDeleted && (
+                <div
+                  className={cn(
+                    "mt-1 flex items-center gap-1",
+                    isCurrentUser ? "justify-end" : "justify-start",
+                  )}>
+                  {Object.entries(reactionCounts).map(([emoji, count]) => {
+                    const isSelected = message.reactions?.some(
+                      (reaction) =>
+                        reaction.emoji === emoji &&
+                        isSameId(reaction.userId, userId),
+                    );
+                    return (
+                      <button
+                        type="button"
+                        key={emoji}
+                        aria-label={`React with ${emoji}`}
+                        aria-pressed={isSelected}
+                        onClick={() => onReaction(message, emoji)}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs shadow-sm transition-colors",
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-background hover:bg-accent",
+                        )}>
+                        <span>{emoji}</span>
+                        <span>{count}</span>
+                      </button>
+                    );
+                  })}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      aria-label="Choose emoji"
+                      aria-expanded={isEmojiPickerOpen}
+                      className="inline-flex size-7 items-center justify-center rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent"
+                      title="Choose emoji"
+                      onClick={() => setIsEmojiPickerOpen((open) => !open)}>
+                      <Smile size={14} />
+                    </button>
+                    {isEmojiPickerOpen && (
+                      <div className="absolute bottom-8 z-10 grid w-48 grid-cols-6 gap-1 rounded-md border border-border bg-popover p-2 text-base shadow-md ltr:left-0 rtl:right-0">
+                        {[
+                          "😀",
+                          "😂",
+                          "😍",
+                          "🤣",
+                          "😊",
+                          "😎",
+                          "😮",
+                          "😢",
+                          "😡",
+                          "👏",
+                          "🔥",
+                          "🎉",
+                          "👍",
+                          "👎",
+                          "❤️",
+                          "💯",
+                          "🙏",
+                          "✅",
+                        ].map((emoji) => (
+                          <button
+                            type="button"
+                            key={emoji}
+                            className="rounded p-1 hover:bg-accent"
+                            aria-label={`React with ${emoji}`}
+                            onClick={() => {
+                              onReaction(message, emoji);
+                              setIsEmojiPickerOpen(false);
+                            }}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <Response>{message.content}</Response>
-                )
-              ) : null}
-
-              {message?.streaming && (
-                <span>
-                  <RiCircleFill className="h-4 w-4 animate-bounce rounded-full dark:text-white mt-1" />
-                </span>
+                </div>
               )}
             </div>
 
@@ -196,66 +284,6 @@ const ChatMessageBody = memo(
                 </Button>
               )}
             </div>
-            {!message.isDeleted && (
-              <div className="flex items-center gap-1 text-xs">
-                {["👍", "❤️", "😂", "😮", "😢", "👏"].map((emoji) => (
-                  <button
-                    type="button"
-                    key={emoji}
-                    onClick={() => onReaction(message, emoji)}>
-                    {emoji}
-                    {message.reactions?.filter(
-                      (reaction) => reaction.emoji === emoji,
-                    ).length || ""}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  aria-label="Choose emoji"
-                  className="relative px-1"
-                  title="Choose emoji"
-                  onClick={() => setIsEmojiPickerOpen((open) => !open)}>
-                  <Smile size={14} />
-                  {isEmojiPickerOpen && (
-                    <span className="absolute bottom-6 right-0 z-10 grid grid-cols-6 gap-1 rounded-md border border-border bg-popover p-2 text-base shadow-md">
-                      {[
-                        "😀",
-                        "😂",
-                        "😍",
-                        "🤣",
-                        "😊",
-                        "😎",
-                        "😮",
-                        "😢",
-                        "😡",
-                        "👏",
-                        "🔥",
-                        "🎉",
-                        "👍",
-                        "👎",
-                        "❤️",
-                        "💯",
-                        "🙏",
-                        "✅",
-                      ].map((emoji) => (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          key={emoji}
-                          className="cursor-pointer rounded p-1 hover:bg-accent"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => {
-                            onReaction(message, emoji);
-                            setIsEmojiPickerOpen(false);
-                          }}>
-                          {emoji}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
 
           {message.status && (
