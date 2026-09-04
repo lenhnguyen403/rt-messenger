@@ -16,7 +16,9 @@ interface SocketState {
     leaveChat: (chatId: string) => void
     startTyping: (chatId: string) => void
     stopTyping: (chatId: string) => void
-    onMentionNotification: (handler: (payload: MentionNotification) => void) => () => void
+    onMentionNotification: (
+        handler: (payload: MentionNotification) => void
+    ) => () => void
 }
 
 export interface MentionNotification {
