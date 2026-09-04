@@ -3,7 +3,7 @@ import { getEnv } from "../utils/get-env";
 export const Env = {
     NODE_ENV: getEnv("NODE_ENV", "development"),
     PORT: getEnv("PORT", "8000"),
-    MONGO_URL: getEnv("MONGO_URI"),
+    MONGO_URI: getEnv("MONGO_URI"),
     JWT_SECRET: getEnv("JWT_SECRET", "your-jwt-secret-key"),
     JWT_EXPIRES_IN: getEnv("JWT_EXPIRES_IN", "15m"),
     FRONTEND_ORIGIN: getEnv("FRONTEND_ORIGIN", "http://localhost:5173"),
