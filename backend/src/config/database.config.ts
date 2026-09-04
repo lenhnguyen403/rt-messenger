@@ -3,7 +3,7 @@ import { Env } from './env.config'
 
 const connectDatabase = async () => {
     try {
-        await mongoose.connect(`${Env.MONGO_URL}/rt-messenger-db`)
+        await mongoose.connect(Env.MONGO_URL)
         console.log('Database connected successfully')
     } catch (error) {
         console.error("Database connection error:", error);

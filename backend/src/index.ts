@@ -18,7 +18,7 @@ import "./config/password.config";
 const app = express();
 const server = http.createServer(app);
 
-const FRONTEND_ORIGIN = Env.FRONTEND_ORIGIN
+const FRONTEND_ORIGIN = Env.FRONTEND_ORIGIN || 'http://localhost:5173'
 const PORT = Env.PORT
 const NODE_ENV = Env.NODE_ENV
 
