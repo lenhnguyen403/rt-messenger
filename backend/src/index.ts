@@ -66,7 +66,11 @@ if (NODE_ENV === "production") {
 
 app.use(errorHandler);
 
-server.listen(PORT, async () => {
+const startServer = async () => {
   await connectDatabase();
-  console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
-});
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
+  });
+};
+
+startServer();
